@@ -3,6 +3,10 @@ em la informatica, y es por ello que este cuenta con diferentes prototipos de fu
 mite al usuario ingresar los valores del arbol binario de busqueda . Cuenta con un menu con opciones como lo son el numero 1 para construir y 
 verificar el arbol binario y 2 para salir del programa. A continuacion se procede con el programa*/
 #include <iostream>
+#include <vector> //Para poder usar el algorimo sort de forma rápida
+#include <algorithm>
+#include <string>
+#include <stdexcept>
 
 //Definimos si estamos en windows o linux para definir funcion d limpiar pantalla
 #ifdef WIN32
@@ -31,8 +35,9 @@ struct ElementosNvlArbol
 
 //prototipos de funciones
 bool menu(struct NodoArbol *&, struct ElementosNvlArbol *&);
-void solicitarInsertarValoresNodos(struct NodoArbol *&, struct ElementosNvlArbol *&cantidaElementos);
-void insertarNodo(struct NodoArbol *&, struct ElementosNvlArbol *&, int);
+void solicitarInsertarValoresNodos(struct NodoArbol *&);
+bool verificarExistenciaElementoRepetidos(vector<int>);
+void insertarNodo(struct NodoArbol *&, int);
 struct NodoArbol *crearNodo(int);
 int cantidadNivelesArbol(struct NodoArbol *, struct ElementosNvlArbol *&, int);
 //Funciones de ElementosNvlArbol
@@ -80,7 +85,7 @@ bool menu(struct NodoArbol *&arbol, struct ElementosNvlArbol *&cantidadElementos
     {
     case 1:
         //Creamos el árbol y verificamos si tiene la cantidad de elementos correspondientes
-        solicitarInsertarValoresNodos(arbol, cantidadElementos);
+        solicitarInsertarValoresNodos(arbol);
         cantidadNiveles = cantidadNivelesArbol(arbol, cantidadElementos, 0) + 1;
 
         if(cantidadNiveles >= 5)
@@ -93,11 +98,16 @@ bool menu(struct NodoArbol *&arbol, struct ElementosNvlArbol *&cantidadElementos
         {
             //Si la cantidad de niveles no es válida advertimos al usuario y salimos
             cls();
-            cout << "El arbol introducido no es válido, ingrese uno valido (mas de 5 nvl)" << endl;
+            cout << "El arbol introducido no es válido, ingrese uno valido (mas de 5 nvl) y con caracteres validos (números enteros no repetidos)" << endl;
         }
 
-        eliminarMemoriaDinamicaArbol(arbol);
-        eliminarMemoriaDinamicaCantidadElementos(cantidadElementos);
+        //Si el arbol no esta vacío
+        if(arbol != NULL)
+        {
+            eliminarMemoriaDinamicaArbol(arbol);
+            eliminarMemoriaDinamicaCantidadElementos(cantidadElementos);
+        }
+
         break;
     case 2:
         return false;
@@ -112,7 +122,7 @@ bool menu(struct NodoArbol *&arbol, struct ElementosNvlArbol *&cantidadElementos
 }
 
 
-void solicitarInsertarValoresNodos(struct NodoArbol *&arbol, struct ElementosNvlArbol *&cantidaElementos)
+void solicitarInsertarValoresNodos(struct NodoArbol *&arbol)
 {
     /*Función que solitita todos los valores del arbol al usuario y lo crea*/
     cout << "INGRESAR VALORES ÁRBOL BINARIO"  <<endl << endl;
@@ -125,6 +135,8 @@ void solicitarInsertarValoresNodos(struct NodoArbol *&arbol, struct ElementosNvl
     cls();
 
     string valorAux = "";
+    //Vector que almacenara los datos ingresados en el árbol, ayudara a determinar si están repetidos elementos en el mismo
+    vector<int> vectorEnteros;
 
     //Recorremos los valores ingresados por el usuario y creamos el arbol
     for(int i = 0; i <= int(valores.length()); i++)
@@ -133,8 +145,29 @@ void solicitarInsertarValoresNodos(struct NodoArbol *&arbol, struct ElementosNvl
         //si es un espacio vacío lo ignoramos y llamamos a insertar Nodo
         if(valores[i] == ' ' || i == int(valores.length()))
         {
-            insertarNodo(arbol, cantidaElementos, stoi(valorAux));
+            int auxValorNuevoNodo;
+            //Se maneja la excepción en caso de que el usuario ingrese un valor no valido
+            try
+            {
+                auxValorNuevoNodo = stoi(valorAux);
+            }
+            catch(std::invalid_argument &)
+            {
+                continue;
+            }
+
+            vectorEnteros.push_back(auxValorNuevoNodo);
+            //Verificamos que el nuevo número no sea repetido, si lo es, retornamos la función
+            if(verificarExistenciaElementoRepetidos(vectorEnteros))
+            {
+                eliminarMemoriaDinamicaArbol(arbol);
+                arbol = NULL;
+                return;
+            }
+
+            insertarNodo(arbol, auxValorNuevoNodo);
             valorAux = "";
+
             continue;
         }
 
@@ -147,8 +180,31 @@ void solicitarInsertarValoresNodos(struct NodoArbol *&arbol, struct ElementosNvl
 }
 
 
+bool verificarExistenciaElementoRepetidos(vector<int> vectorEnteros)
+{
+    /*Función que recibe un vector, y verifica si este tiene datos repetidos, si los tiene retorna true*/
+
+    //Ordenamos el vector
+    sort(vectorEnteros.begin(), vectorEnteros.end());
+
+    //Revisamos que no tenga valores repetidos
+    for(int i = 0; i < int(vectorEnteros.size()); i++)
+    {
+        //Si no nos encontramos en la ultima posición
+        if(i != int(vectorEnteros.size()) -1)
+            if(vectorEnteros[i] == vectorEnteros[i+1])
+            {
+                return true;
+            }
+    }
+
+    return false;
+
+}
+
+
 //---------------------------FUNCIONES DE NODOARBOL-------------------------------//
-void insertarNodo(struct NodoArbol *&raiz, struct ElementosNvlArbol *&cantidaElementos, int nuevoValor)
+void insertarNodo(struct NodoArbol *&raiz, int nuevoValor)
 {
     /*Insertamos en el árbol un nuevo nodo, este nodo puede ser la raíz del arbol completo
     Esta función es recursiva, ya que puede llamar a ella multiples veces si es necesario*/
@@ -166,10 +222,10 @@ void insertarNodo(struct NodoArbol *&raiz, struct ElementosNvlArbol *&cantidaEle
         Y volvemos a llamar a esta función*/
         if(raiz ->numero < nuevoValor)
         {
-            insertarNodo(raiz ->nodoDerecho, cantidaElementos, nuevoValor);
+            insertarNodo(raiz ->nodoDerecho, nuevoValor);
         }else
         {
-            insertarNodo(raiz ->nodoIzquierdo, cantidaElementos, nuevoValor);
+            insertarNodo(raiz ->nodoIzquierdo, nuevoValor);
         }
     }
 }
